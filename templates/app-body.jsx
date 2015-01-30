@@ -50,8 +50,8 @@ Body = React.createClass({
   mixins: [Router.State],
   
   propTypes: {
-    Lists: React.PropTypes.instanceOf(Mongo.Collection).isRequired,
-    Todos: React.PropTypes.instanceOf(Mongo.Collection).isRequired
+    lists: React.PropTypes.instanceOf(Mongo.Collection).isRequired,
+    todos: React.PropTypes.instanceOf(Mongo.Collection).isRequired
   },
   
   getInitialState: function() {
@@ -62,6 +62,7 @@ Body = React.createClass({
     };
   },
   
+  // FIXME: we should really be redirected to the correct route if we are on the home route. Need to think about how to do that
   chooseSelectedList: function() {
     // FIXME: we really need to check that we are on the right route for this
     var selectedListId = this.getParams()._id || (this.state.lists.length && this.state.lists[0]._id);
@@ -77,26 +78,28 @@ Body = React.createClass({
     
     self.dep = Tracker.autorun(function() {
       self.setState({
-        lists: self.props.Lists.find().fetch()
+        lists: self.props.lists.find().fetch()
       });
       self.chooseSelectedList();
     });
-  },
-  
-  componentWillReceiveProps: function() {
-    this.chooseSelectedList();
   },
   
   componentWillUnmount: function() {
     this.dep.stop();
   },
   
+  componentWillReceiveProps: function() {
+    this.chooseSelectedList();
+  },
   
   render: function() {
     return (
       // XXX menu open / cordova 
       <div id="container">
         <Menu state={this.state}/>
+        <div id="content-container">
+          <RouteHandler state={this.state} todos={this.props.todos}/>
+        </div>
       </div>
     );
   }
