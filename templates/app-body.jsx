@@ -47,7 +47,7 @@ Menu = React.createClass({
 });
 
 Body = React.createClass({
-  mixins: [Router.State],
+  mixins: [Router.State, Router.Navigation],
   
   propTypes: {
     lists: React.PropTypes.instanceOf(Mongo.Collection).isRequired,
@@ -58,28 +58,39 @@ Body = React.createClass({
     return {
       lists: [],
       selectedListId: null,
-      userId: null // TODO
+      userId: null, // TODO
     };
   },
   
-  // FIXME: we should really be redirected to the correct route if we are on the home route. Need to think about how to do that
   chooseSelectedList: function() {
-    // FIXME: we really need to check that we are on the right route for this
-    var selectedListId = this.getParams()._id || (this.state.lists.length && this.state.lists[0]._id);
-    this.setState({
-      selectedListId: selectedListId
-    });
+    var firstListId = this.state.lists.length && this.state.lists[0]._id;
+    var routeId = this.getParams()._id;
+
+    if (this.isActive('home') && firstListId) {
+      // If we're on the home route and finally have a firstListId, redirect
+      // to listsShow
+      this.transitionTo('listsShow', { 
+        _id: firstListId 
+      });
+    } else if (this.isActive('listsShow') && routeId) {
+      // If we're on listsShow and the route has an id, select the appropriate
+      // list
+      this.setState({
+        selectedListId: routeId
+      });
+    }
   },
   
   componentWillMount: function() {
     var self = this;
     
-    Meteor.subscribe('publicLists');
+    Meteor.subscribe('publicLists')
     
     self.dep = Tracker.autorun(function() {
       self.setState({
         lists: self.props.lists.find().fetch()
       });
+      
       self.chooseSelectedList();
     });
   },

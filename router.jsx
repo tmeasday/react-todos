@@ -5,7 +5,7 @@ var Route = Router.Route,
 routes = (
   <Route name="appBody" path="/" handler={Body}>
     <Route name="listsShow" path='/lists/:_id' handler={ListsShow}/>
-    <DefaultRoute handler={ListsShow}/>
+    <DefaultRoute name="home" handler={Home}/>
     
     <Route name="join" handler={Join}/>
     <Route name="signin" handler={Signin}/>
