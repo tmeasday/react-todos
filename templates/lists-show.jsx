@@ -9,7 +9,7 @@ ListsShow = React.createClass({
   getInitialState: function() {
     return {
       todos: [],
-      selectedTodoId: null
+      editingTodoId: null
     };
   },
 
@@ -21,7 +21,6 @@ ListsShow = React.createClass({
     self.sub = Meteor.subscribe('todos', listId);
     
     self.dep = Tracker.autorun(function() {
-      console.log(self.props, self.state)
       self.setState({
         todos: self.props.todos.find({listId: listId}).fetch()
       });
@@ -32,6 +31,12 @@ ListsShow = React.createClass({
     this.sub.stop();
     this.dep.stop();
   },
+  
+  makeTodoEditing: function(todo, editing) {
+    this.setState({
+      editingTodoId: editing ? todo._id : null
+    });
+  },
 
   render: function() {
     var self = this;
@@ -40,8 +45,9 @@ ListsShow = React.createClass({
     if (self.sub.ready()) {
       if (self.state.todos.length) {
         todosOrLoading = self.state.todos.map(function(todo) {
-          var selected = todo._id === self.state.selectedTodoId;
-          return <TodoItem todo={todo} selected={selected}/>;
+          var editing = (todo._id === self.state.editingTodoId);
+          return <TodoItem todos={self.props.todos} todo={todo} 
+            editing={editing} makeEditing={self.makeTodoEditing.bind(self, todo)}/>;
         });
       } else {
         todosOrLoading = (
