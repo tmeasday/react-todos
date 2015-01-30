@@ -4,7 +4,7 @@
 if (Meteor.isClient) {
   Meteor.startup(function() {
     Router.run(routes, function (Handler) {
-      React.render(<Handler/>, document.body);
+      React.render(<Handler Lists={Lists} Todos={Todos}/>, document.body);
     });
   });
 }

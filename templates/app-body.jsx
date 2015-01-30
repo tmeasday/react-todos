@@ -1,11 +1,101 @@
 var RouteHandler = Router.RouteHandler;
 
+ListItem = React.createClass({
+  render: function() {
+    
+    // <a href="{{pathFor 'listsShow'}}" class="list-todo {{activeListClass}}" title="{{name}}">
+    //   {{#if incompleteCount}}
+    //     <span class="count-list">{{incompleteCount}}</span>
+    //   {{/if}}
+    //   {{name}}
+    // </a>
+    
+    //   {{#if userId}}
+    //     
+    //   {{/if}}
+    var lockIcon = this.props.state.userId ? <span className="icon-lock"/> : '';
+    var incompleteCount = '';
+    if (this.props.list.incompleteCount)
+      incompleteCount = <span className="count-list">{this.props.list.incompleteCount}</span>;
+
+    var classes = React.addons.classSet({
+      'list-todo': true,
+      'active': this.props.selected
+    });
+    
+    return (
+      <a href="?" className={classes} title={this.props.list.name}>
+        {lockIcon}
+        {incompleteCount}
+        {this.props.list.name}
+      </a>
+    );
+  }
+});
+
+
+Menu = React.createClass({
+  render: function() {
+    // XXX: not a fan of .bind(this) rather than self. Shall we just use ES6?
+    var self = this;
+    
+    var items = self.props.state.lists.map(function(list) {
+      var selected = self.props.state.selectedListId === list._id;
+      return <ListItem {...self.props} key={list._id} list={list} selected={selected}/>;
+    });
+    
+    return (
+      <section id="menu">
+        <div className="list-todos">
+          <a className="js-new-list link-list-new"><span className="icon-plus"></span>New List</a>
+          {items}
+        </div>
+      </section>
+    );
+  }
+});
+
 Body = React.createClass({
+  mixins: [Router.State],
+  
+  propTypes: {
+    Lists: React.PropTypes.instanceOf(Mongo.Collection).isRequired,
+    Todos: React.PropTypes.instanceOf(Mongo.Collection).isRequired
+  },
+  
+  getInitialState: function() {
+    return {
+      lists: [],
+      selectedListId: null,
+      userId: null // TODO
+    };
+  },
+  
+  componentWillMount: function() {
+    var self = this;
+    
+    Meteor.subscribe('publicLists');
+    
+    self.dep = Tracker.autorun(function() {
+      var lists = self.props.Lists.find().fetch();
+      var selectedListId = self.getParams()._id || (lists.length && lists[0]._id);
+      self.setState({
+        lists: lists,
+        selectedListId: selectedListId
+      })
+    });
+  },
+  
+  componentWillUnmount: function() {
+    this.dep.stop();
+  },
+  
+  
   render: function() {
     return (
-      <div>
-        <h1>HEY THERE</h1>
-        <RouteHandler/>
+      // XXX menu open / cordova 
+      <div id="container">
+        <Menu state={this.state}/>
       </div>
     );
   }
