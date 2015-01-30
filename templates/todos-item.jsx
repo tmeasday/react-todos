@@ -51,7 +51,7 @@ TodoItem = React.createClass({
         <input type="text" value={this.props.todo.text} placeholder="Task name" 
           onFocus={this.handleFocus} onBlur={this.handleBlur} onChange={this.handleChange}
           onKeyDown={this.handleKeyDown}/>
-        <a className="js-delete-item delete-item" href="#"><span class="icon-trash"></span></a>
+        <a className="js-delete-item delete-item" href="#"><span className="icon-trash"></span></a>
       </div>
     );
   }
