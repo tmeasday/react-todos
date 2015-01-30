@@ -1,18 +1,8 @@
-var RouteHandler = Router.RouteHandler;
+var RouteHandler = Router.RouteHandler,
+  Link = Router.Link;
 
 ListItem = React.createClass({
   render: function() {
-    
-    // <a href="{{pathFor 'listsShow'}}" class="list-todo {{activeListClass}}" title="{{name}}">
-    //   {{#if incompleteCount}}
-    //     <span class="count-list">{{incompleteCount}}</span>
-    //   {{/if}}
-    //   {{name}}
-    // </a>
-    
-    //   {{#if userId}}
-    //     
-    //   {{/if}}
     var lockIcon = this.props.state.userId ? <span className="icon-lock"/> : '';
     var incompleteCount = '';
     if (this.props.list.incompleteCount)
@@ -24,11 +14,11 @@ ListItem = React.createClass({
     });
     
     return (
-      <a href="?" className={classes} title={this.props.list.name}>
+      <Link to="listsShow" params={this.props.list} className={classes} title={this.props.list.name}>
         {lockIcon}
         {incompleteCount}
         {this.props.list.name}
-      </a>
+      </Link>
     );
   }
 });
@@ -41,6 +31,7 @@ Menu = React.createClass({
     
     var items = self.props.state.lists.map(function(list) {
       var selected = self.props.state.selectedListId === list._id;
+
       return <ListItem {...self.props} key={list._id} list={list} selected={selected}/>;
     });
     
@@ -71,19 +62,29 @@ Body = React.createClass({
     };
   },
   
+  chooseSelectedList: function() {
+    // FIXME: we really need to check that we are on the right route for this
+    var selectedListId = this.getParams()._id || (this.state.lists.length && this.state.lists[0]._id);
+    this.setState({
+      selectedListId: selectedListId
+    });
+  },
+  
   componentWillMount: function() {
     var self = this;
     
     Meteor.subscribe('publicLists');
     
     self.dep = Tracker.autorun(function() {
-      var lists = self.props.Lists.find().fetch();
-      var selectedListId = self.getParams()._id || (lists.length && lists[0]._id);
       self.setState({
-        lists: lists,
-        selectedListId: selectedListId
-      })
+        lists: self.props.Lists.find().fetch()
+      });
+      self.chooseSelectedList();
     });
+  },
+  
+  componentWillReceiveProps: function() {
+    this.chooseSelectedList();
   },
   
   componentWillUnmount: function() {
