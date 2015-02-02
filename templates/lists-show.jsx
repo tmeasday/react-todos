@@ -3,7 +3,7 @@ ListsShow = React.createClass({
   
   propTypes: {
     // FIXME: should we just be passing the user around?
-    userId: React.PropTypes.string.isRequired,
+    userId: React.PropTypes.string,
     list: React.PropTypes.object, // May still be loading (FIXME: ?)
     // FIXME: is it good enough to just match on object for the collections?
     collections: React.PropTypes.object.isRequired
@@ -104,7 +104,7 @@ var ListsShowEditor = React.createClass({
   mixins: [Router.Navigation],
   
   propTypes: {
-    userId: React.PropTypes.string.isRequired,
+    userId: React.PropTypes.string,
     list: React.PropTypes.object.isRequired,
     collections: React.PropTypes.object.isRequired
   },

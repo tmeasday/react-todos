@@ -43,14 +43,17 @@ Body = React.createClass({
   componentWillMount: function() {
     var self = this;
     
-    self.sub = Meteor.subscribe('publicLists')
     
-    self.dep = Tracker.autorun(function() {
-      self.setState({
-        lists: self.props.collections.Lists.find().fetch()
-      });
+    Tracker.nonreactive(function() {
+      self.sub = Meteor.subscribe('publicLists')
+    
+      self.dep = Tracker.autorun(function() {
+        self.setState({
+          lists: self.props.collections.Lists.find().fetch()
+        });
       
-      self.chooseSelectedList();
+        self.chooseSelectedList();
+      });
     });
   },
   
@@ -100,7 +103,7 @@ Body = React.createClass({
 
 var Menu = React.createClass({
   propTypes: {
-    userId: React.PropTypes.string.isRequired,
+    userId: React.PropTypes.string,
     lists: React.PropTypes.arrayOf(React.PropTypes.object).isRequired,
     selectedList: React.PropTypes.object,
     createNewList: React.PropTypes.func.isRequired
@@ -110,11 +113,12 @@ var Menu = React.createClass({
     var items = this.props.lists.map(function(list) {
       var selected = this.props.selectedList && (this.props.selectedList._id === list._id);
 
-      return <ListItem key={list._id} list={list} selected={selected} userId={this.props.userId}/>;
+      return <ListItem key={list._id} list={list} selected={selected}/>;
     }.bind(this));
     
     return (
       <section id="menu">
+        <UserState userId={this.props.userId}/>
         <div className="list-todos">
           <a className="link-list-new" onClick={this.props.createNewList}><span className="icon-plus"></span>New List</a>
           {items}
@@ -124,13 +128,33 @@ var Menu = React.createClass({
   }
 });
 
+var UserState = React.createClass({
+  propTypes: {
+    userId: React.PropTypes.string
+  },
+  render: function() {
+    return (this.props.userId ? this.renderLoggedIn() : this.renderLoggedOut());
+  },
+  renderLoggedIn: function() {
+    // TODO
+    return '';
+  },
+  renderLoggedOut: function() {
+    return (
+      <div className="btns-group">
+        <Link to="signin" className="btn-secondary">Sign In</Link>
+        <Link to="join" className="btn-secondary">Join</Link>
+      </div>
+    );
+  }
+});
+
 var ListItem = React.createClass({
   propTypes: {
-    userId: React.PropTypes.string.isRequired,
     list: React.PropTypes.object.isRequired
   },
   render: function() {
-    var lockIcon = this.props.userId ? <span className="icon-lock"/> : '';
+    var lockIcon = this.props.list.userId ? <span className="icon-lock"/> : '';
     var incompleteCount = '';
     if (this.props.list.incompleteCount)
       incompleteCount = <span className="count-list">{this.props.list.incompleteCount}</span>;
