@@ -101,6 +101,8 @@ ListsShow = React.createClass({
 });
 
 var ListsShowEditor = React.createClass({
+  mixins: [Router.Navigation],
+  
   propTypes: {
     userId: React.PropTypes.string.isRequired,
     list: React.PropTypes.object.isRequired,
@@ -134,6 +136,45 @@ var ListsShowEditor = React.createClass({
     input.value = '';
   },
   
+  deleteList: function() {
+    var list = this.props.list;
+    
+    // ensure the last public list cannot be deleted.
+    if (! list.userId && 
+      this.props.collections.Lists.find({userId: {$exists: false}}).count() === 1) {
+      return alert("Sorry, you cannot delete the final public list!");
+    }
+  
+    var message = "Are you sure you want to delete the list " + list.name + "?";
+    if (confirm(message)) {
+      // we must remove each item individually from the client
+      this.props.collections.Todos.find({listId: list._id}).forEach(function(todo) {
+        this.props.collections.Todos.remove(todo._id);
+      }.bind(this));
+      this.props.collections.Lists.remove(list._id);
+
+      this.transitionTo('home'); 
+    }
+  },
+  
+  toggleListPrivacy: function() {
+    // TODO
+    // if (! Meteor.user()) {
+    //   return alert("Please sign in or create an account to make private lists.");
+    // }
+    //
+    // if (list.userId) {
+    //   Lists.update(list._id, {$unset: {userId: true}});
+    // } else {
+    //   // ensure the last public list cannot be made private
+    //   if (Lists.find({userId: {$exists: false}}).count() === 1) {
+    //     return alert("Sorry, you cannot make the final public list private!");
+    //   }
+    //
+    //   Lists.update(list._id, {$set: {userId: Meteor.userId()}});
+    // }
+  },
+  
   render: function() {
     var title;
     if (this.state.editing) {
@@ -143,7 +184,7 @@ var ListsShowEditor = React.createClass({
         <div>
           <MenuNav/>
           <ListsShowTitle list={this.props.list}/>
-          <ListsShowMenu list={this.props.list}/>
+          <ListsShowMenu list={this.props.list} deleteList={this.deleteList} toggleListPrivacy={this.toggleListPrivacy}/>
         </div>
       );
     }
@@ -193,13 +234,24 @@ var ListsShowTitle = React.createClass({
 
 var ListsShowMenu = React.createClass({
   propTypes: {
-    list: React.PropTypes.object.isRequired
+    list: React.PropTypes.object.isRequired,
+    deleteList: React.PropTypes.func.isRequired,
+    toggleListPrivacy: React.PropTypes.func.isRequired
+  },
+  handleSelectChange: function(event) {
+    if (event.target.value === 'delete') {
+      this.props.deleteList();
+    } else if (event.target.value === 'private') {
+      this.props.toggleListPrivacy(true);
+    } else {
+      this.props.toggleListPrivacy(false);
+    }
   },
   render: function() {
     return (
       <div className="nav-group right">
         <div className="nav-item options-mobile">
-          <select className="list-edit">
+          <select className="list-edit" onChange={this.handleSelectChange}>
             <option disabled>Select an action</option>
             {this.props.list.userId ?
               <option value="public">Make Public</option>
@@ -217,7 +269,7 @@ var ListsShowMenu = React.createClass({
             }
           </a>
 
-          <a className="js-delete-list nav-item">
+          <a className="nav-item" onClick={this.props.deleteList}>
             <span className="icon-trash" title="Delete list"></span>
           </a>
         </div>

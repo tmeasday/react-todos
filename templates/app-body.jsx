@@ -73,13 +73,19 @@ Body = React.createClass({
       list: selectedList
     };
     
+    var page;
+    if (this.sub.ready) {
+      page = (!! pageProps.list) ? <RouteHandler {...pageProps}/> : <NotFound/>;
+    } else {
+      page = <Loading/>;
+    }
     
     return (
       // TODO: menu open / cordova 
       <div id="container">
         <Menu userId={this.props.userId} lists={this.state.lists} selectedList={selectedList}/>
         <div id="content-container">
-          {this.sub.ready() ? <RouteHandler {...pageProps}/> : <Loading/>}
+          {page}
         </div>
       </div>
     );
@@ -140,5 +146,21 @@ var ListItem = React.createClass({
 var Loading = React.createClass({
   render: function() {
     return <img src="/img/logo-todos.svg" className="loading-app" />;
+  }
+});
+
+var NotFound = React.createClass({
+  render: function() {
+    return (
+      <div className="page not-found">
+        <MenuNav/>
+
+        <div className="content-scrollable">
+          <div className="wrapper-message">
+            <div className="title-message">Page not found</div>
+          </div>
+        </div>
+      </div>
+    );
   }
 });
