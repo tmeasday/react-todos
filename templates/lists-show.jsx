@@ -21,6 +21,13 @@ ListsShow = React.createClass({
     //   created as a side effect of a change in another autorun
     //   [in this case, loading->listsShow triggered by route sub going ready]
     //
+    // Otherwise if the outer computation [i.e. in body] invalidates,
+    //   Tracker will kill this comp, assuming that when outer re-runs it'll
+    //   re-establish it. However that's not how react work. Instead
+    //   react calls `componentWillReceiveProps`. So another alternative
+    //   is to re-setup the autorun there. That might make sense and 
+    //   answer the NOTE below.
+    //
     // We should either do this always, or call setState in afterFlush.
     Tracker.nonreactive(function() {
       this.dep = Tracker.autorun(function() {
