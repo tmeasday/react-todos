@@ -124,7 +124,7 @@ var ListsShowEditor = React.createClass({
       createdAt: new Date()
     });
     this.props.collections.Lists.update(this.props.list._id, {$inc: {incompleteCount: 1}});
-    input.value.value = '';
+    input.value = '';
   },
   
   render: function() {
