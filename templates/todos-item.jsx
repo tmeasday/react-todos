@@ -10,8 +10,7 @@ TodoItem = React.createClass({
     var checked = $(event.target).is(':checked');
     this.props.collections.Todos.update(this.props.todo._id, {$set: {checked: checked}});
 
-    // FIXME: I guess we need to pass this in too
-    // Lists.update(this.listId, {$inc: {incompleteCount: checked ? -1 : 1}});
+    this.props.collections.Lists.update(this.props.todo.listId, {$inc: {incompleteCount: checked ? -1 : 1}});
   },
   
   handleFocus: function() {
