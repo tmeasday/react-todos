@@ -62,6 +62,12 @@ Body = React.createClass({
     this.chooseSelectedList();
   },
   
+  createNewList: function() {
+    var list = {name: this.props.collections.Lists.defaultName(), incompleteCount: 0};
+    list._id = this.props.collections.Lists.insert(list);
+    this.transitionTo('listsShow', list);
+  },
+  
   render: function() {
     var selectedList;
     if (this.state.selectedListId)
@@ -83,7 +89,7 @@ Body = React.createClass({
     return (
       // TODO: menu open / cordova 
       <div id="container">
-        <Menu userId={this.props.userId} lists={this.state.lists} selectedList={selectedList}/>
+        <Menu userId={this.props.userId} lists={this.state.lists} selectedList={selectedList} createNewList={this.createNewList}/>
         <div id="content-container">
           {page}
         </div>
@@ -96,7 +102,8 @@ var Menu = React.createClass({
   propTypes: {
     userId: React.PropTypes.string.isRequired,
     lists: React.PropTypes.arrayOf(React.PropTypes.object).isRequired,
-    selectedList: React.PropTypes.object
+    selectedList: React.PropTypes.object,
+    createNewList: React.PropTypes.func.isRequired
   },
   
   render: function() {
@@ -109,7 +116,7 @@ var Menu = React.createClass({
     return (
       <section id="menu">
         <div className="list-todos">
-          <a className="js-new-list link-list-new"><span className="icon-plus"></span>New List</a>
+          <a className="link-list-new" onClick={this.props.createNewList}><span className="icon-plus"></span>New List</a>
           {items}
         </div>
       </section>
