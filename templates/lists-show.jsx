@@ -91,8 +91,8 @@ ListsShow = React.createClass({
     
     return (
       <div className="page lists-show">
+        <ListsShowEditor {...this.props}/>
         <div className="content-scrollable list-items">
-          <ListsShowEditor {...this.props}/>
           {todosOrLoading}
         </div>
       </div>
