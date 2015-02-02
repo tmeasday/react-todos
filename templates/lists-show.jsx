@@ -136,6 +136,12 @@ var ListsShowEditor = React.createClass({
     input.value = '';
   },
   
+  editList: function(bool) {
+    this.setState({
+      editing: bool
+    });
+  },
+  
   deleteList: function() {
     var list = this.props.list;
     
@@ -178,13 +184,15 @@ var ListsShowEditor = React.createClass({
   render: function() {
     var title;
     if (this.state.editing) {
-      title = <ListsShowTitleEditor {...this.props}/>;
+      title = <ListsShowTitleEditor list={this.props.list} 
+        collections={this.props.collections} editList={this.editList}/>;
     } else {
       title = (
         <div>
           <MenuNav/>
-          <ListsShowTitle list={this.props.list}/>
-          <ListsShowMenu list={this.props.list} deleteList={this.deleteList} toggleListPrivacy={this.toggleListPrivacy}/>
+          <ListsShowTitle list={this.props.list} editList={this.editList}/>
+          <ListsShowMenu list={this.props.list} editList={this.editList}
+            deleteList={this.deleteList}  toggleListPrivacy={this.toggleListPrivacy} />
         </div>
       );
     }
@@ -204,14 +212,35 @@ var ListsShowEditor = React.createClass({
 
 var ListsShowTitleEditor = React.createClass({
   propTypes: {
-    list: React.PropTypes.object.isRequired
+    list: React.PropTypes.object.isRequired,
+    editList: React.PropTypes.func.isRequired,
+    collections: React.PropTypes.object.isRequired
+  },  
+  getInitialState: function() {
+    return {
+      name: this.props.list.name
+    };
+  },
+  handleChange: function(event) {
+    this.setState({name: event.target.value});
+  },
+  // FIXME: this doesn't work because the blur event fires before the click.
+  cancelChanges: function(event) {
+    event.preventDefault();
+    this.props.editList(false);
+  },
+  saveList: function() {
+    if (! this.cancelled) {
+      this.props.collections.Lists.update(this.props.list._id, {$set: {name: this.state.name}});
+      this.props.editList(false);
+    }
   },
   render: function() {
     return (
-      <form className="js-edit-form list-edit-form">
-        <input type="text" name="name" value={this.props.list.name}/>
+      <form className="list-edit-form" onSubmit={this.saveList}>
+        <input type="text" name="name" value={this.state.name} onChange={this.handleChange} onBlur={this.saveList}/>
         <div className="nav-group right">
-          <a href="#" className="js-cancel nav-item"><span className="icon-close js-cancel" title="Cancel"></span></a>
+          <a className="nav-item" onClick={this.cancelChanges}><span className="icon-close" title="Cancel"></span></a>
         </div>
       </form>
     )
@@ -220,11 +249,15 @@ var ListsShowTitleEditor = React.createClass({
 
 var ListsShowTitle = React.createClass({
   propTypes: {
-    list: React.PropTypes.object.isRequired
+    list: React.PropTypes.object.isRequired,
+    editList: React.PropTypes.func.isRequired
+  },
+  handleClick: function() {
+    this.props.editList(true);
   },
   render: function() {
     return (
-      <h1 className="js-edit-list title-page">
+      <h1 className="title-page" onClick={this.handleClick}>
         <span className="title-wrapper">{this.props.list.name}</span> 
         <span className="count-list">{this.props.list.incompleteCount}</span>
       </h1>
@@ -235,11 +268,14 @@ var ListsShowTitle = React.createClass({
 var ListsShowMenu = React.createClass({
   propTypes: {
     list: React.PropTypes.object.isRequired,
+    editList: React.PropTypes.func.isRequired,
     deleteList: React.PropTypes.func.isRequired,
     toggleListPrivacy: React.PropTypes.func.isRequired
   },
   handleSelectChange: function(event) {
-    if (event.target.value === 'delete') {
+    if (event.target.value === 'edit') {
+      this.props.editList(true);
+    } else if (event.target.value === 'delete') {
       this.props.deleteList();
     } else if (event.target.value === 'private') {
       this.props.toggleListPrivacy(true);
