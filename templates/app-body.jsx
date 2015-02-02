@@ -1,64 +1,23 @@
 var RouteHandler = Router.RouteHandler,
   Link = Router.Link;
 
-ListItem = React.createClass({
-  render: function() {
-    var lockIcon = this.props.state.userId ? <span className="icon-lock"/> : '';
-    var incompleteCount = '';
-    if (this.props.list.incompleteCount)
-      incompleteCount = <span className="count-list">{this.props.list.incompleteCount}</span>;
-
-    var classes = React.addons.classSet({
-      'list-todo': true,
-      'active': this.props.selected
-    });
-    
-    return (
-      <Link to="listsShow" params={this.props.list} className={classes} title={this.props.list.name}>
-        {lockIcon}
-        {incompleteCount}
-        {this.props.list.name}
-      </Link>
-    );
-  }
-});
-
-
-Menu = React.createClass({
-  render: function() {
-    // XXX: not a fan of .bind(this) rather than self. Shall we just use ES6?
-    var self = this;
-    
-    var items = self.props.state.lists.map(function(list) {
-      var selected = self.props.state.selectedListId === list._id;
-
-      return <ListItem {...self.props} key={list._id} list={list} selected={selected}/>;
-    });
-    
-    return (
-      <section id="menu">
-        <div className="list-todos">
-          <a className="js-new-list link-list-new"><span className="icon-plus"></span>New List</a>
-          {items}
-        </div>
-      </section>
-    );
-  }
-});
 
 Body = React.createClass({
   mixins: [Router.State, Router.Navigation],
   
   propTypes: {
-    lists: React.PropTypes.instanceOf(Mongo.Collection).isRequired,
-    todos: React.PropTypes.instanceOf(Mongo.Collection).isRequired
+    userId: React.PropTypes.string,
+    collections: React.PropTypes.shape({
+      Todos: React.PropTypes.instanceOf(Mongo.Collection),
+      Lists: React.PropTypes.instanceOf(Mongo.Collection),
+      Users: React.PropTypes.instanceOf(Mongo.Collection),
+    }).isRequired
   },
   
   getInitialState: function() {
     return {
       lists: [],
-      selectedListId: null,
-      userId: null, // TODO
+      selectedListId: null
     };
   },
   
@@ -84,11 +43,11 @@ Body = React.createClass({
   componentWillMount: function() {
     var self = this;
     
-    Meteor.subscribe('publicLists')
+    self.sub = Meteor.subscribe('publicLists')
     
     self.dep = Tracker.autorun(function() {
       self.setState({
-        lists: self.props.lists.find().fetch()
+        lists: self.props.collections.Lists.find().fetch()
       });
       
       self.chooseSelectedList();
@@ -104,15 +63,82 @@ Body = React.createClass({
   },
   
   render: function() {
+    var selectedList;
+    if (this.state.selectedListId)
+      selectedList = this.props.collections.Lists.findOne(this.state.selectedListId);
+    
+    var pageProps = {
+      collections: this.props.collections,
+      userId: this.props.userId,
+      list: selectedList
+    };
+    
+    
     return (
-      // XXX menu open / cordova 
+      // TODO: menu open / cordova 
       <div id="container">
-        <Menu state={this.state}/>
+        <Menu userId={this.props.userId} lists={this.state.lists} selectedList={selectedList}/>
         <div id="content-container">
-          <RouteHandler state={this.state} todos={this.props.todos}/>
+          {this.sub.ready() ? <RouteHandler {...pageProps}/> : <Loading/>}
         </div>
       </div>
     );
   }
 });
 
+var Menu = React.createClass({
+  propTypes: {
+    userId: React.PropTypes.string.isRequired,
+    lists: React.PropTypes.arrayOf(React.PropTypes.object).isRequired,
+    selectedList: React.PropTypes.object
+  },
+  
+  render: function() {
+    var items = this.props.lists.map(function(list) {
+      var selected = this.props.selectedList && (this.props.selectedList._id === list._id);
+
+      return <ListItem key={list._id} list={list} selected={selected} userId={this.props.userId}/>;
+    }.bind(this));
+    
+    return (
+      <section id="menu">
+        <div className="list-todos">
+          <a className="js-new-list link-list-new"><span className="icon-plus"></span>New List</a>
+          {items}
+        </div>
+      </section>
+    );
+  }
+});
+
+var ListItem = React.createClass({
+  propTypes: {
+    userId: React.PropTypes.string.isRequired,
+    list: React.PropTypes.object.isRequired
+  },
+  render: function() {
+    var lockIcon = this.props.userId ? <span className="icon-lock"/> : '';
+    var incompleteCount = '';
+    if (this.props.list.incompleteCount)
+      incompleteCount = <span className="count-list">{this.props.list.incompleteCount}</span>;
+
+    var classes = React.addons.classSet({
+      'list-todo': true,
+      'active': this.props.selected
+    });
+    
+    return (
+      <Link to="listsShow" params={this.props.list} className={classes} title={this.props.list.name}>
+        {lockIcon}
+        {incompleteCount}
+        {this.props.list.name}
+      </Link>
+    );
+  }
+});
+
+var Loading = React.createClass({
+  render: function() {
+    return <img src="/img/logo-todos.svg" className="loading-app" />;
+  }
+});

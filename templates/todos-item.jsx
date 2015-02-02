@@ -1,6 +1,6 @@
 TodoItem = React.createClass({
   propTypes: {
-    todos: React.PropTypes.instanceOf(Mongo.Collection).isRequired,
+    collections: React.PropTypes.object.isRequired,
     todo: React.PropTypes.object.isRequired,
     editing: React.PropTypes.bool.isRequired,
     makeEditing: React.PropTypes.func.isRequired
@@ -8,7 +8,7 @@ TodoItem = React.createClass({
 
   handleCheck: function(event) {
     var checked = $(event.target).is(':checked');
-    this.props.todos.update(this.props.todo._id, {$set: {checked: checked}});
+    this.props.collections.Todos.update(this.props.todo._id, {$set: {checked: checked}});
 
     // FIXME: I guess we need to pass this in too
     // Lists.update(this.listId, {$inc: {incompleteCount: checked ? -1 : 1}});
@@ -23,7 +23,7 @@ TodoItem = React.createClass({
   },
   
   handleChange: function(event) {
-    this.props.todos.update(this.props.todo._id, {$set: {text: event.target.value}});
+    this.props.collections.Todos.update(this.props.todo._id, {$set: {text: event.target.value}});
   },
   
   handleKeyDown: function(event) {

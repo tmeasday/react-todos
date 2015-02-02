@@ -2,8 +2,11 @@ ListsShow = React.createClass({
   mixins: [Router.State],
   
   propTypes: {
-    state: React.PropTypes.object.isRequired,
-    todos: React.PropTypes.instanceOf(Mongo.Collection).isRequired
+    // FIXME: should we just be passing the user around?
+    userId: React.PropTypes.string.isRequired,
+    list: React.PropTypes.object, // May still be loading (FIXME: ?)
+    // FIXME: is it good enough to just match on object for the collections?
+    collections: React.PropTypes.object.isRequired
   },
   
   getInitialState: function() {
@@ -14,21 +17,29 @@ ListsShow = React.createClass({
   },
 
   componentWillMount: function() {
-    var self = this;
-  
-    self.dep = Tracker.autorun(function() {
-      var listId = self.props.state.selectedListId;
-      self.sub = Meteor.subscribe('todos', listId);
+    // FIXME: we need to wrap in non-reactive in case this component was
+    //   created as a side effect of a change in another autorun
+    //   [in this case, loading->listsShow triggered by route sub going ready]
+    //
+    // We should either do this always, or call setState in afterFlush.
+    Tracker.nonreactive(function() {
+      this.dep = Tracker.autorun(function() {
+        // FIXME: this sub doesn't start until the lists sub is ready.
+        //   this is kind of inefficient (we could start it earlier)
+        //   as all we need is the listId. It's an argument against template-level
+        //   subs I guess. Do we need to solve it?
+        this.sub = Meteor.subscribe('todos', this.props.list._id);
 
-      self.setState({
-        todos: self.props.todos.find({listId: listId}).fetch()
-      });
-    });
+        this.setState({
+          todos: this.props.collections.Todos.find({listId: this.props.list._id}).fetch()
+        });
+      }.bind(this));
+    }.bind(this));
   },
   
   // NOTE: Is this the right pattern for re-subscribing when props change?
   componentWillReceiveProps: function(nextProps) {
-    if (this.props.state.selectedListId !== nextProps.state.selectedListId) {
+    if (this.props.list._id !== nextProps.list._id) {
       this.dep.invalidate();
     }
   },
@@ -43,7 +54,7 @@ ListsShow = React.createClass({
       editingTodoId: editing ? todo._id : null
     });
   },
-
+  
   render: function() {
     var self = this;
     var todosOrLoading;
@@ -52,7 +63,7 @@ ListsShow = React.createClass({
       if (self.state.todos.length) {
         todosOrLoading = self.state.todos.map(function(todo) {
           var editing = (todo._id === self.state.editingTodoId);
-          return <TodoItem todos={self.props.todos} todo={todo} 
+          return <TodoItem collections={self.props.collections} todo={todo} 
             editing={editing} key={todo._id} makeEditing={self.makeTodoEditing.bind(self, todo)}/>;
         });
       } else {
@@ -74,9 +85,136 @@ ListsShow = React.createClass({
     return (
       <div className="page lists-show">
         <div className="content-scrollable list-items">
+          <ListsShowEditor {...this.props}/>
           {todosOrLoading}
         </div>
       </div>
     );
+  }
+});
+
+var ListsShowEditor = React.createClass({
+  propTypes: {
+    userId: React.PropTypes.string.isRequired,
+    list: React.PropTypes.object.isRequired,
+    collections: React.PropTypes.object.isRequired
+  },
+  
+  getInitialState: function() {
+    return {
+      editing: false
+    };
+  },
+  
+  focusNewTodo: function() {
+    this.refs.newTodo.getDOMNode().focus();
+  },
+  
+  createNewTodo: function(event) {
+    event.preventDefault();
+    
+    var input = this.refs.newTodo.getDOMNode();
+    if (! input.value)
+      return;
+    
+    this.props.collections.Todos.insert({
+      listId: this.props.list._id,
+      text: input.value,
+      checked: false,
+      createdAt: new Date()
+    });
+    this.props.collections.Lists.update(this.props.list._id, {$inc: {incompleteCount: 1}});
+    input.value.value = '';
+  },
+  
+  render: function() {
+    var title;
+    if (this.state.editing) {
+      title = <ListsShowTitleEditor {...this.props}/>;
+    } else {
+      title = (
+        <div>
+          <MenuNav/>
+          <ListsShowTitle list={this.props.list}/>
+          <ListsShowMenu list={this.props.list}/>
+        </div>
+      );
+    }
+    
+    return (
+      <nav classNameName="js-title-nav">
+        {title}
+
+        <form className="todo-new input-symbol" onSubmit={this.createNewTodo}>
+          <input type="text" placeholder="Type to add new tasks" ref="newTodo"/>
+          <span className="icon-add" onClick={this.focusNewTodo}></span>
+        </form>
+      </nav>
+    )
+  }
+});
+
+var ListsShowTitleEditor = React.createClass({
+  propTypes: {
+    list: React.PropTypes.object.isRequired
+  },
+  render: function() {
+    return (
+      <form className="js-edit-form list-edit-form">
+        <input type="text" name="name" value={this.props.list.name}/>
+        <div className="nav-group right">
+          <a href="#" className="js-cancel nav-item"><span className="icon-close js-cancel" title="Cancel"></span></a>
+        </div>
+      </form>
+    )
+  }
+});
+
+var ListsShowTitle = React.createClass({
+  propTypes: {
+    list: React.PropTypes.object.isRequired
+  },
+  render: function() {
+    return (
+      <h1 className="js-edit-list title-page">
+        <span className="title-wrapper">{this.props.list.name}</span> 
+        <span className="count-list">{this.props.list.incompleteCount}</span>
+      </h1>
+    );
+  }
+});
+
+var ListsShowMenu = React.createClass({
+  propTypes: {
+    list: React.PropTypes.object.isRequired
+  },
+  render: function() {
+    return (
+      <div className="nav-group right">
+        <div className="nav-item options-mobile">
+          <select className="list-edit">
+            <option disabled>Select an action</option>
+            {this.props.list.userId ?
+              <option value="public">Make Public</option>
+            : <option value="private">Make Private</option>
+            }
+            <option value="delete">Delete</option>
+          </select>
+          <span className="icon-cog"></span>
+        </div>
+        <div className="options-web">
+          <a className="js-toggle-list-privacy nav-item">
+            {this.props.list.userId ?
+              <span className="icon-lock" title="Make list public"></span>
+            : <span className="icon-unlock" title="Make list private"></span>
+            }
+          </a>
+
+          <a className="js-delete-list nav-item">
+            <span className="icon-trash" title="Delete list"></span>
+          </a>
+        </div>
+      </div>
+    )
   }
 });
