@@ -84,7 +84,11 @@ Body = React.createClass({
     
     var page;
     if (this.sub.ready) {
-      page = (!! pageProps.list) ? <RouteHandler {...pageProps}/> : <NotFound/>;
+      if (this.isActive('listsShow') && ! pageProps.list) {
+        page = <NotFound/>;
+      } else {
+        page = <RouteHandler {...pageProps}/>; 
+      }
     } else {
       page = <Loading/>;
     }
@@ -132,13 +136,51 @@ var UserState = React.createClass({
   propTypes: {
     userId: React.PropTypes.string
   },
+  
+  getInitialState: function() {
+    return {
+      open: false
+    }
+  },
+  
+  toggleOpen: function() {
+    this.setState({open: ! this.state.open});
+  },
+  
+  logout: function() {
+    Meteor.logout();
+    
+    // TODO: should logout be a prop passed down from the body? 
+    //   is there a more appropriate way to send this kind of "application"
+    //   message? perhaps a flux-like model?
+    
+    // if we are on a private list, we'll need to go to a public one
+    // var current = Router.current();
+    // if (current.route.name === 'listsShow' && current.data().userId) {
+    //   Router.go('listsShow', Lists.findOne({userId: {$exists: false}}));
+    // }
+  },
+  
   render: function() {
     return (this.props.userId ? this.renderLoggedIn() : this.renderLoggedOut());
   },
+  
   renderLoggedIn: function() {
-    // TODO
-    return '';
+    // XXX: Don't access Meteor.user() here
+    var email = Meteor.user() && Meteor.user().emails[0].address || '';
+    var emailLocalPart = email.substring(0, email.indexOf('@'));
+    
+    return (
+      <div className="btns-group-vertical">
+        <a className="btn-secondary" onClick={this.toggleOpen}>
+          <span className={this.state.open ? 'icon-arrow-up' : 'icon-arrow-down'}></span>
+          {emailLocalPart}
+        </a>
+        {this.state.open && <a className="btn-secondary" onClick={this.logout}>Logout</a>}
+      </div>
+    )
   },
+  
   renderLoggedOut: function() {
     return (
       <div className="btns-group">

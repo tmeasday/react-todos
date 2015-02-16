@@ -7,7 +7,7 @@ routes = (
     <Route name="listsShow" path='/lists/:_id' handler={ListsShow}/>
     <DefaultRoute name="home" handler={Home}/>
     
-    <Route name="join" handler={Join}/>
+    <Route name="join" path='/join' handler={Join}/>
     <Route name="signin" handler={Signin}/>
     <NotFoundRoute handler={NotFound}/>
   </Route>
