@@ -1,6 +1,5 @@
 ### TODOs
 
-- login
 - make lists public/private
 
 
