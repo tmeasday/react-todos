@@ -1,7 +1,7 @@
 var Link = Router.Link;
 
 Join = React.createClass({
-  mixins: [Router.Navigation],
+  mixins: [Router.Navigation, React.addons.LinkedStateMixin],
   
   getInitialState: function() {
     return {
@@ -12,10 +12,8 @@ Join = React.createClass({
     }
   },
   
-  handleChange: function(field, event) {
-    var change = {};
-    change[field] = event.target.value;
-    this.setState(change);
+  hasError: function(name) {
+    return _.has(this.state.errors, name);
   },
   
   handleSubmit: function(event) {
@@ -50,7 +48,6 @@ Join = React.createClass({
 
       this.transitionTo('home');
     }.bind(this));
-    
   },
   
   render: function() {
@@ -61,6 +58,11 @@ Join = React.createClass({
     if (errorMessages.length) {
       errorMessages = <div className="list-errors">{errorMessages}</div>;
     }
+    
+    var inputProps = {
+      linkState: this.linkState,
+      hasError: this.hasError
+    };
     
     return (
       <div className="page auth">
@@ -74,20 +76,14 @@ Join = React.createClass({
             <form onSubmit={this.handleSubmit}>
               {errorMessages}
 
-              <FormInput type="email" name="email" value={this.state.email} 
-                placeholder="Your Email"
-                error={_.has(this.state.errors, 'email')} 
-                handleChange={this.handleChange.bind(this, 'email')}/>
+              <FormInput type="email" name="email" placeholder="Your Email"
+                {...inputProps}/>
 
-              <FormInput type="password" name="password" value={this.state.password} 
-                placeholder="Password"
-                error={_.has(this.state.errors, 'password')} 
-                handleChange={this.handleChange.bind(this, 'password')}/>
+              <FormInput type="password" name="password" placeholder="Password"
+                {...inputProps}/>
 
-              <FormInput type="password" name="confirm" value={this.state.confirm} 
-                placeholder="Confirm Password"
-                error={_.has(this.state.errors, 'confirm')} 
-                handleChange={this.handleChange.bind(this, 'confirm')}/>
+              <FormInput type="password" name="confirm" 
+                placeholder="Confirm Password" {...inputProps}/>
 
               <button type="submit" className="btn-primary">Join Now</button>
             </form>
@@ -103,23 +99,22 @@ Join = React.createClass({
 var FormInput = React.createClass({
   propTypes: {
     name: React.PropTypes.string.isRequired,
-    value: React.PropTypes.string.isRequired,
-    error: React.PropTypes.bool.isRequired,
-    handleChange: React.PropTypes.func.isRequired,
+    linkState: React.PropTypes.func.isRequired,
+    hasError: React.PropTypes.func.isRequired
   },
   
   render: function() {
-    var {error, handleChange, title, ...other} = this.props;
+    var {name, linkState, hasError, title, ...other} = this.props;
     var classes = React.addons.classSet({
       'input-symbol': true,
-      'error': !! error
+      'error': this.props.hasError(name)
     });
     
-    title = title || this.props.name;
+    title = title || name;
     
     return (
       <div className={classes}>
-        <input onChange={handleChange} {...other}/>
+        <input name={name} valueLink={linkState(name)} {...other}/>
         <span className="icon-lock" title={title}></span>
       </div>
     );
