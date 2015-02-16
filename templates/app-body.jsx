@@ -41,20 +41,20 @@ Body = React.createClass({
   },
   
   componentWillMount: function() {
-    var self = this;
-    
-    
     Tracker.nonreactive(function() {
-      self.sub = Meteor.subscribe('publicLists')
+      this.sub = Meteor.subscribe('publicLists')
     
-      self.dep = Tracker.autorun(function() {
-        self.setState({
-          lists: self.props.collections.Lists.find().fetch()
+      if (this.props.userId)
+        Meteor.subscribe('privateLists', this.props.userId);
+    
+      this.dep = Tracker.autorun(function() {
+        this.setState({
+          lists: this.props.collections.Lists.find().fetch()
         });
       
-        self.chooseSelectedList();
-      });
-    });
+        this.chooseSelectedList();
+      }.bind(this));
+    }.bind(this));
   },
   
   componentWillUnmount: function() {

@@ -164,21 +164,23 @@ var ListsShowEditor = React.createClass({
   },
   
   toggleListPrivacy: function() {
-    // TODO
-    // if (! Meteor.user()) {
-    //   return alert("Please sign in or create an account to make private lists.");
-    // }
-    //
-    // if (list.userId) {
-    //   Lists.update(list._id, {$unset: {userId: true}});
-    // } else {
-    //   // ensure the last public list cannot be made private
-    //   if (Lists.find({userId: {$exists: false}}).count() === 1) {
-    //     return alert("Sorry, you cannot make the final public list private!");
-    //   }
-    //
-    //   Lists.update(list._id, {$set: {userId: Meteor.userId()}});
-    // }
+    var list = this.props.list, Lists = this.props.collections.Lists;
+
+    // TODO - pass Meteor.user() around
+    if (! Meteor.user()) {
+      return alert("Please sign in or create an account to make private lists.");
+    }
+
+    if (list.userId) {
+      Lists.update(list._id, {$unset: {userId: true}});
+    } else {
+      // ensure the last public list cannot be made private
+      if (Lists.find({userId: {$exists: false}}).count() === 1) {
+        return alert("Sorry, you cannot make the final public list private!");
+      }
+
+        Lists.update(list._id, {$set: {userId: Meteor.userId()}});
+    }
   },
   
   render: function() {
@@ -298,7 +300,7 @@ var ListsShowMenu = React.createClass({
           <span className="icon-cog"></span>
         </div>
         <div className="options-web">
-          <a className="js-toggle-list-privacy nav-item">
+          <a className="nav-item" onClick={this.props.toggleListPrivacy}>
             {this.props.list.userId ?
               <span className="icon-lock" title="Make list public"></span>
             : <span className="icon-unlock" title="Make list private"></span>

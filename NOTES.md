@@ -1,6 +1,6 @@
 ### TODOs
 
-- make lists public/private
+
 
 
 ### Questions
