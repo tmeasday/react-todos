@@ -6,7 +6,7 @@ Body = React.createClass({
   mixins: [Router.State, Router.Navigation],
   
   propTypes: {
-    userId: React.PropTypes.string,
+    user: React.PropTypes.object,
     collections: React.PropTypes.shape({
       Todos: React.PropTypes.instanceOf(Mongo.Collection),
       Lists: React.PropTypes.instanceOf(Mongo.Collection),
@@ -21,16 +21,25 @@ Body = React.createClass({
     };
   },
   
-  chooseSelectedList: function() {
-    var firstListId = this.state.lists.length && this.state.lists[0]._id;
-    var routeId = this.getParams()._id;
+  goToFirstPublicList: function() {
+    var publicLists = _.filter(this.state.lists, function(l) {
+      return ! l.userId;
+    });
+    var firstListId = publicLists.length && publicLists[0]._id;
 
-    if (this.isActive('home') && firstListId) {
-      // If we're on the home route and finally have a firstListId, redirect
-      // to listsShow
+    if (firstListId) {
       this.transitionTo('listsShow', { 
         _id: firstListId 
       });
+    }
+  },
+
+  chooseSelectedList: function() {
+    var routeId = this.getParams()._id;
+
+      // If we're on the home route, try to redirect to first public list
+    if (this.isActive('home')) {
+      this.goToFirstPublicList();
     } else if (this.isActive('listsShow') && routeId) {
       // If we're on listsShow and the route has an id, select the appropriate
       // list
@@ -41,13 +50,14 @@ Body = React.createClass({
   },
   
   componentWillMount: function() {
+    // FIXME: use meteor-react package / this.getMeteorState / this.subs (?)
     Tracker.nonreactive(function() {
       this.sub = Meteor.subscribe('publicLists')
-    
-      if (this.props.userId)
-        Meteor.subscribe('privateLists', this.props.userId);
-    
+      
       this.dep = Tracker.autorun(function() {
+        if (this.props.user)
+          Meteor.subscribe('privateLists', this.props.user._id);
+    
         this.setState({
           lists: this.props.collections.Lists.find().fetch()
         });
@@ -62,7 +72,13 @@ Body = React.createClass({
   },
   
   componentWillReceiveProps: function() {
+    this.dep.invalidate();
     this.chooseSelectedList();
+  },
+  
+  selectedList: function() {
+    if (this.state.selectedListId)
+      return this.props.collections.Lists.findOne(this.state.selectedListId);
   },
   
   createNewList: function() {
@@ -71,14 +87,21 @@ Body = React.createClass({
     this.transitionTo('listsShow', list);
   },
   
-  render: function() {
-    var selectedList;
-    if (this.state.selectedListId)
-      selectedList = this.props.collections.Lists.findOne(this.state.selectedListId);
+  logout: function() {
+    Meteor.logout();
     
+    // if we are on a private list, we'll need to go to a public one
+    var currentRoute = this.getRoutes().pop();
+    if (currentRoute.name === 'listsShow' && this.selectedList().userId) {
+      this.goToFirstPublicList();
+    }
+  },
+  
+  render: function() {
+    var selectedList = this.selectedList();
     var pageProps = {
       collections: this.props.collections,
-      userId: this.props.userId,
+      user: this.props.user,
       list: selectedList
     };
     
@@ -96,7 +119,10 @@ Body = React.createClass({
     return (
       // TODO: menu open / cordova 
       <div id="container">
-        <Menu userId={this.props.userId} lists={this.state.lists} selectedList={selectedList} createNewList={this.createNewList}/>
+        <Menu user={this.props.user} lists={this.state.lists} 
+          selectedList={selectedList} 
+          createNewList={this.createNewList}
+          logout={this.logout}/>
         <div id="content-container">
           {page}
         </div>
@@ -107,10 +133,11 @@ Body = React.createClass({
 
 var Menu = React.createClass({
   propTypes: {
-    userId: React.PropTypes.string,
+    user: React.PropTypes.object,
     lists: React.PropTypes.arrayOf(React.PropTypes.object).isRequired,
     selectedList: React.PropTypes.object,
-    createNewList: React.PropTypes.func.isRequired
+    createNewList: React.PropTypes.func.isRequired,
+    logout: React.PropTypes.func.isRequired
   },
   
   render: function() {
@@ -122,7 +149,7 @@ var Menu = React.createClass({
     
     return (
       <section id="menu">
-        <UserState userId={this.props.userId}/>
+        <UserState user={this.props.user} logout={this.props.logout}/>
         <div className="list-todos">
           <a className="link-list-new" onClick={this.props.createNewList}><span className="icon-plus"></span>New List</a>
           {items}
@@ -134,7 +161,7 @@ var Menu = React.createClass({
 
 var UserState = React.createClass({
   propTypes: {
-    userId: React.PropTypes.string
+    user: React.PropTypes.object
   },
   
   getInitialState: function() {
@@ -147,27 +174,12 @@ var UserState = React.createClass({
     this.setState({open: ! this.state.open});
   },
   
-  logout: function() {
-    Meteor.logout();
-    
-    // TODO: should logout be a prop passed down from the body? 
-    //   is there a more appropriate way to send this kind of "application"
-    //   message? perhaps a flux-like model?
-    
-    // if we are on a private list, we'll need to go to a public one
-    // var current = Router.current();
-    // if (current.route.name === 'listsShow' && current.data().userId) {
-    //   Router.go('listsShow', Lists.findOne({userId: {$exists: false}}));
-    // }
-  },
-  
   render: function() {
-    return (this.props.userId ? this.renderLoggedIn() : this.renderLoggedOut());
+    return (this.props.user ? this.renderLoggedIn() : this.renderLoggedOut());
   },
   
   renderLoggedIn: function() {
-    // XXX: Don't access Meteor.user() here
-    var email = Meteor.user() && Meteor.user().emails[0].address || '';
+    var email = this.props.user.emails[0].address || '';
     var emailLocalPart = email.substring(0, email.indexOf('@'));
     
     return (
@@ -176,7 +188,7 @@ var UserState = React.createClass({
           <span className={this.state.open ? 'icon-arrow-up' : 'icon-arrow-down'}></span>
           {emailLocalPart}
         </a>
-        {this.state.open && <a className="btn-secondary" onClick={this.logout}>Logout</a>}
+        {this.state.open && <a className="btn-secondary" onClick={this.props.logout}>Logout</a>}
       </div>
     )
   },

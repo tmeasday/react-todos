@@ -47,7 +47,12 @@ ListsShow = React.createClass({
   // NOTE: Is this the right pattern for re-subscribing when props change?
   componentWillReceiveProps: function(nextProps) {
     if (this.props.list._id !== nextProps.list._id) {
+      // FIXME: this code is copied from the react-router package, just use that.
+      var temp = this.props;
+      this.props = nextProps;
       this.dep.invalidate();
+      Tracker.flush();
+      this.props = temp;
     }
   },
   

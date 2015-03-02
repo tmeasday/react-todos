@@ -9,9 +9,10 @@ var collections = {
 
 if (Meteor.isClient) {
   Meteor.startup(function() {
-    Router.run(routes, function (Handler) {
+    Router.run(routes, Router.HistoryLocation, function (Handler, state) {
       Tracker.autorun(function() {
-        React.render(<Handler collections={collections} userId={Meteor.userId()}/>, document.body);
+        var html = <Handler collections={collections} user={Meteor.user()}/>;
+        React.render(html, document.body);
       });
     });
   });

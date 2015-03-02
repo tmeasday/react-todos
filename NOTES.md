@@ -1,39 +1,19 @@
 ### TODOs
 
 
-
-
 ### Questions
 
-- how to pass Meteor.user() around?
-  - Make the user a prop of body?
-  - Make the userId a prop of body and do collections.Users.findOne() where we need it?
-  - Call Meteor.user()? [ugggh]
+1. Should we use flux for actions?
 
-Z: I think 1. makes more sense given you'll always be writing some form of code like
+ - Log in/out
+ - Create users.
+ - create/modify list
+ - create/modify todo
+ 
+ Alternatively we could just pass a set of modifier functions down the stack.
 
-```
-  if (this.props.user)
-    frobnicate(this.props.user.firstName());
-```
+2. 
 
-In case 2., you have to go
-
-```
-  if (this.props.userId) {
-    var user = this.props.collections.Users.findOne(this.props.userId);
-    
-    if (user)
-      frobnicate(this.props.user.firstName);
-  }
-```
-
-Not sure when the latter would be more advantageous over the former. 
-
-- how to logout/in/create user? 
-  - Global handler mediated by body?
-  - Message ala Flux?
-  - Directly in component [ugggh]
 
 Z: I attribute this (and probably the following question) to the crappness of
 thinking in a global world (i.e meteor apps). In the way the app is currently 
